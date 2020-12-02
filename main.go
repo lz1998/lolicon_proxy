@@ -16,6 +16,7 @@ import (
 func main() {
 	apikey := os.Getenv("LOLICON_APIKEY")
 	if apikey != "" {
+		log.Infof("load LOLICON_APIKEY from ENV, %+v", apikey)
 		config.Apikey = apikey
 	} else {
 		log.Warnf("failed to read LOLICON_APIKEY from ENV. Config Url: /config?apikey=xxx&cache_count=xxx")
@@ -29,14 +30,22 @@ func main() {
 			time.Sleep(5 * time.Second)
 			os.Exit(0)
 		}
+		log.Infof("load CACHE_COUNT from ENV, %+v", cacheCount)
 		config.CacheCount = count
 	}
 
 	PORT := os.Getenv("PORT")
 	if PORT != "" {
+		log.Infof("load PORT from ENV, %+v", PORT)
 		PORT = ":" + PORT
 	} else {
 		PORT = ":18000"
+	}
+
+	greedy := os.Getenv("GREEDY")
+	if greedy == "1" {
+		log.Infof("load GREEDY from ENV, %+v", greedy)
+		config.Greedy = true
 	}
 
 	// 启动时检测是否足够

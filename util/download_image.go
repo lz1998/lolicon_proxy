@@ -28,6 +28,7 @@ func init() {
 					log.Errorf("failed to download image url: %+v err: %+v", u, err)
 				}
 			}()
+			log.Infof("downloadUrl channel length: %+v", len(UrlChan))
 		}
 	}()
 }

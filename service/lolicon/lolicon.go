@@ -11,14 +11,12 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lz1998/lolicon_proxy/config"
 	"github.com/lz1998/lolicon_proxy/util"
 	log "github.com/sirupsen/logrus"
 )
-
-var CheckLock sync.Mutex
-var GetLock sync.Mutex
 
 type LoliconResp struct {
 	Code        int         `json:"code"`
@@ -46,6 +44,14 @@ type ImageInfo struct {
 
 const (
 	LoliconUrl = "https://api.lolicon.app/setu/"
+)
+
+var (
+	CheckLock    sync.Mutex
+	GetLock      sync.Mutex
+	LastCallTime int64
+	Quota        int
+	QuotaMinTTL  int
 )
 
 // 调用api.lolicon.app获取图片信息
@@ -96,41 +102,65 @@ func CallLolicon(apikey string, r18 string, keyword string, num string) (*Lolico
 	if loliconResp.Code != 0 {
 		return nil, fmt.Errorf(loliconResp.Msg)
 	}
+	Quota = loliconResp.Quota
+	QuotaMinTTL = loliconResp.QuotaMinTTL
+	LastCallTime = time.Now().Unix()
 	return &loliconResp, nil
+}
+
+func GetImageCount(r18 bool) int64 {
+	var count int64
+	Db.Model(&ImageInfo{}).Where("used = 0").Where("r18 = ?", r18).Count(&count)
+	return count
 }
 
 func CheckImageCount(r18 bool) {
 	CheckLock.Lock()
 	defer CheckLock.Unlock()
-	var count int64
-	Db.Model(&ImageInfo{}).Where("used = 0").Where("r18 = ?", r18).Count(&count)
+	var count = GetImageCount(r18)
 	log.Infof("check image count, r18: %+v, count: %+v", r18, count)
 	if count < config.CacheCount {
-		log.Infof("call lolicon api to get image, apikey: %+v, r18: %+v", config.Apikey, r18)
-		resp, err := CallLolicon(config.Apikey, func() string {
-			if r18 {
-				return "1"
-			} else {
-				return "0"
+		PrepareImage(r18)
+	}
+	if config.Greedy && Quota > 50 {
+		util.SafeGo(func() {
+			time.Sleep(600 * time.Second)
+			if (Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) && len(util.UrlChan) < 5 && time.Now().Unix()-LastCallTime > 300 {
+				log.Infof("greedy mode is on, prepare image, quota: %+v, downloadChannelLength: %+v, lastCallTime: %+v", Quota, len(util.UrlChan), LastCallTime)
+				PrepareImage(false)
+				PrepareImage(true)
 			}
-		}(), "", "10")
-		if err != nil {
-			log.Errorf("failed to call lolicon api, err: %+v", err)
-			return
+		})
+	}
+}
+
+func PrepareImage(r18 bool) {
+	log.Infof("call lolicon api to get image, apikey: %+v, r18: %+v", config.Apikey, r18)
+	resp, err := CallLolicon(config.Apikey, func() string {
+		if r18 {
+			return "1"
+		} else {
+			return "0"
 		}
-		log.Infof("succeed to call lolicon api, resp: %+v", string(util.JsonMustMarshal(resp)))
-		for _, imageInfo := range resp.Data {
-			util.AddDownloadUrl(imageInfo.URL) // 自动下载
-			// 存json
-			if err := SaveImageJson(&imageInfo); err != nil {
-				log.Errorf("failed to save image info in json, err: %+v", err)
-			}
-			// 存数据库
-			if err := Db.Save(&imageInfo).Error; err != nil {
-				log.Errorf("failed to save image info in db, err: %+v", err)
-			}
+	}(), "", "10")
+	if err != nil {
+		log.Errorf("failed to call lolicon api, err: %+v", err)
+		return
+	}
+	log.Infof("succeed to call lolicon api, resp: %+v", string(util.JsonMustMarshal(resp)))
+	for _, imageInfo := range resp.Data {
+		util.AddDownloadUrl(imageInfo.URL) // 自动下载
+		// 存json
+		if err := SaveImageJson(&imageInfo); err != nil {
+			log.Errorf("failed to save image info in json, err: %+v", err)
+		}
+		// 存数据库
+		if err := Db.Save(&imageInfo).Error; err != nil {
+			log.Errorf("failed to save image info in db, err: %+v", err)
 		}
 	}
+	count := GetImageCount(r18)
+	log.Infof("after preparing image, count: %+v, r18: %+v", count, r18)
 }
 
 func SaveImageJson(imageInfo *ImageInfo) error {
