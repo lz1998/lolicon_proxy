@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-GOOS="linux"
+GOOS="darwin"
 GOARCH="amd64"
 
 OUTPUT_FILE="output/lolicon_proxy-${GOOS}-${GOARCH}"
