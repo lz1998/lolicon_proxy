@@ -1,0 +1,9 @@
+static/
+json/
+.DS_Store
+.idea
+
+output/
+
+*.exe
+*.db
