@@ -41,6 +41,8 @@ PORT=18000 ./lolicon_proxy
 
 使用浏览器访问`http://localhost:18000/lolicon?r18=0&keyword=`，或前端/机器人等应用直接填写链接
 
+**技术上不禁止R18图片，使用时请遵守所在国家法律**
+
 **速度优化仅针对无`keyword`的情况，如果使用`keyword`参数，会直接调用API，速度较慢**
 
 ## 程序逻辑
