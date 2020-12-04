@@ -12,7 +12,7 @@
 
 ## 下载lolicon_proxy
 
-在[Actions](https://github.com/lz1998/lolicon_proxy/actions)中选择Linux或Windows，选择最新Result，并下载Artifacts
+在[Releases](https://github.com/lz1998/lolicon_proxy/releases)中选择相应版本并下载
 
 ## 运行lolicon_proxy
 
