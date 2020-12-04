@@ -7,3 +7,5 @@ output/
 
 *.exe
 *.db
+*.log
+logs/

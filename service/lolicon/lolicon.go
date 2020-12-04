@@ -122,13 +122,23 @@ func CheckImageCount(r18 bool) {
 	if count < config.CacheCount {
 		PrepareImage(r18)
 	}
-	if config.Greedy && Quota > 50 {
+	if config.Greedy && (Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) {
 		util.SafeGo(func() {
 			time.Sleep(600 * time.Second)
 			if (Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) && len(util.UrlChan) < 5 && time.Now().Unix()-LastCallTime > 300 {
 				log.Infof("greedy mode is on, prepare image, quota: %+v, downloadChannelLength: %+v, lastCallTime: %+v", Quota, len(util.UrlChan), LastCallTime)
 				PrepareImage(false)
 				PrepareImage(true)
+			} else {
+				if !(Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) {
+					log.Infof("greedy mode is on, but quota is not enough, %+v", Quota)
+				}
+				if !(len(util.UrlChan) < 5) {
+					log.Infof("greedy mode is on, but download channel is not empty, %+v", len(util.UrlChan))
+				}
+				if !(time.Now().Unix()-LastCallTime > 300) {
+					log.Infof("greedy mode is on, but lastCallTime is %+v", LastCallTime)
+				}
 			}
 		})
 	}
