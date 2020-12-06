@@ -17,7 +17,7 @@ func Lolicon(c *gin.Context) {
 	var u string
 	if keyword == "" {
 		log.Infof("request has no keyword, use cached image")
-		url, err := lolicon.GetSavedImageUrl(r18 == "1" || strings.ToLower(r18) == "true")
+		url, err := lolicon.GetUnusedImageUrl(r18 == "1" || strings.ToLower(r18) == "true")
 		if err != nil {
 			c.String(http.StatusInternalServerError, "get saved image url error, err: %+v", err)
 			return

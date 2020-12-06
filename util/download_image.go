@@ -14,6 +14,9 @@ var UrlChan = make(chan string, 500)
 
 func init() {
 	rand.Seed(time.Now().Unix())
+}
+
+func StartDownload() {
 	go func() {
 		for u := range UrlChan {
 			time.Sleep(2 * time.Second)

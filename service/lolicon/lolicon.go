@@ -122,26 +122,30 @@ func CheckImageCount(r18 bool) {
 	if count < config.CacheCount {
 		PrepareImage(r18)
 	}
-	if config.Greedy && (Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) {
-		util.SafeGo(func() {
+}
+
+func GreedyMode() {
+	util.SafeGo(func() {
+		for {
 			time.Sleep(600 * time.Second)
 			if (Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) && len(util.UrlChan) < 5 && time.Now().Unix()-LastCallTime > 300 {
 				log.Infof("greedy mode is on, prepare image, quota: %+v, downloadChannelLength: %+v, lastCallTime: %+v", Quota, len(util.UrlChan), LastCallTime)
 				PrepareImage(false)
 				PrepareImage(true)
 			} else {
+				log.Warnf("not download")
 				if !(Quota > 50 || LastCallTime+int64(QuotaMinTTL) < time.Now().Unix()) {
 					log.Infof("greedy mode is on, but quota is not enough, %+v", Quota)
 				}
 				if !(len(util.UrlChan) < 5) {
 					log.Infof("greedy mode is on, but download channel is not empty, %+v", len(util.UrlChan))
 				}
-				if !(time.Now().Unix()-LastCallTime > 300) {
+				if !(time.Now().Unix()-LastCallTime > 15) {
 					log.Infof("greedy mode is on, but lastCallTime is %+v", LastCallTime)
 				}
 			}
-		})
-	}
+		}
+	})
 }
 
 func PrepareImage(r18 bool) {
@@ -185,7 +189,7 @@ func SaveImageJson(imageInfo *ImageInfo) error {
 	return ioutil.WriteFile("./json/"+jsonFileName, imageInfoJsonBytes, 0777)
 }
 
-func GetSavedImageUrl(r18 bool) (string, error) {
+func GetUnusedImageUrl(r18 bool) (string, error) {
 	util.SafeGo(func() { // 每次请求前检测数量是否足够，如果不足请求
 		CheckImageCount(r18)
 	})
@@ -199,4 +203,18 @@ func GetSavedImageUrl(r18 bool) (string, error) {
 	imageInfo.Used += 1 // 标记为已使用
 	Db.Save(imageInfo)
 	return imageInfo.URL, nil
+}
+
+func GetUnusedImageUrls(r18 bool) ([]string, error) {
+	var imageInfos []*ImageInfo
+	err := Db.Model(&ImageInfo{}).Where("used = 0").Where("r18 = ?", r18).Find(&imageInfos).Error
+	if err != nil {
+		return nil, err
+	}
+
+	urls := make([]string, 0)
+	for _, imageInfo := range imageInfos {
+		urls = append(urls, imageInfo.URL)
+	}
+	return urls, nil
 }

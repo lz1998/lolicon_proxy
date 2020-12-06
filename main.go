@@ -55,11 +55,37 @@ func main() {
 		config.Greedy = true
 	}
 
+	// 启动时检测所有used=0图片，如果不存在自动下载
+	util.SafeGo(func() {
+		if unusedImageUrls, err := lolicon.GetUnusedImageUrls(false); err != nil {
+			log.Warnf("failed to get unused urls, r18: %+v, %+v", false, err)
+		} else {
+			log.Infof("unused urls (r18: %+v): %+v", false, unusedImageUrls)
+			for _, url := range unusedImageUrls {
+				util.AddDownloadUrl(url)
+			}
+		}
+		if unusedImageUrls, err := lolicon.GetUnusedImageUrls(true); err != nil {
+			log.Warnf("failed to get unused urls, r18: %+v, %+v", true, err)
+		} else {
+			log.Infof("unused urls (r18: %+v): %+v", true, unusedImageUrls)
+			for _, url := range unusedImageUrls {
+				util.AddDownloadUrl(url)
+			}
+		}
+	})
+
 	// 启动时检测是否足够
 	util.SafeGo(func() {
 		lolicon.CheckImageCount(false)
 		lolicon.CheckImageCount(true)
 	})
+
+	if config.Greedy {
+		lolicon.GreedyMode() // 在空闲且quota足够时自动请求
+	}
+
+	util.StartDownload()
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
