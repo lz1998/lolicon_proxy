@@ -51,6 +51,9 @@ func DownloadIfNotExist(u string) (string, error) {
 		}
 
 		b, err := GetBytes(u)
+		if err != nil {
+			return "", err
+		}
 		b[len(b)-1] = byte(rand.Intn(120)) // 混淆md5
 		err = ioutil.WriteFile(filePath, b, 0644)
 		if err != nil {
