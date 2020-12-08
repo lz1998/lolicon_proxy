@@ -19,7 +19,6 @@ func init() {
 func StartDownload() {
 	go func() {
 		for u := range UrlChan {
-			time.Sleep(2 * time.Second)
 			func() {
 				defer func() {
 					e := recover()
@@ -63,6 +62,7 @@ func DownloadIfNotExist(u string) (string, error) {
 			return "", err
 		}
 		log.Infof("succeed to download image, filename: %+v, url: %+v", fileName, u)
+		time.Sleep(1 * time.Second) // 冷却时间
 	} else {
 		log.Infof("image exists, filename: %+v, url: %+v", fileName, u)
 	}
